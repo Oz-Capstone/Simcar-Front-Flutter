@@ -1,10 +1,11 @@
 import 'package:flutter/material.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import 'login/login.dart';
-import 'main/home.dart';
-import 'mypage/mypage.dart';
-import 'login/join.dart';
 
-void main() {
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized(); // 비동기 초기화
+  await SharedPreferences.getInstance(); // SharedPreferences 초기화
+
   runApp(const MyApp());
 }
 
@@ -14,7 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'SimCar App',
+      title: '오즈',
       theme: ThemeData(
         primarySwatch: Colors.blue,
       ),
@@ -29,9 +30,10 @@ class SplashScreen extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     Future.delayed(const Duration(seconds: 2), () {
-      Navigator.pushReplacement(
+      Navigator.pushAndRemoveUntil(
         context,
         MaterialPageRoute(builder: (context) => LoginPage()),
+        (Route<dynamic> route) => false, // 모든 페이지 제거
       );
     });
 

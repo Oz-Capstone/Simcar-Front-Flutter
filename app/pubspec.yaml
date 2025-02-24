@@ -30,6 +30,10 @@ environment:
 dependencies:
   flutter:
     sdk: flutter
+  http: ^0.13.3
+  http_parser: ^4.0.2  
+  shared_preferences: ^2.2.2
+  image_picker: ^1.0.4
 
 
   # The following adds the Cupertino Icons font to your application.
@@ -39,6 +43,16 @@ dependencies:
 dev_dependencies:
   flutter_test:
     sdk: flutter
+  flutter_launcher_icons: ^0.13.1
+
+flutter_launcher_icons:
+  android: true
+  ios: true
+  image_path: "assets/app_icon.png"  # 앱 아이콘 경로
+  adaptive_icon_background: "#ffffff"  # 안드로이드 어댑티브 아이콘 배경색
+  adaptive_icon_foreground: "assets/app_icon.png"  # 안드로이드 어댑티브 아이콘 전경 이미지 
+  remove_alpha_ios: true  # ✅ iOS에서 투명 채널 제거
+
 
   # The "flutter_lints" package below contains a set of recommended lints to
   # encourage good coding practices. The lint set provided by the package is
@@ -52,6 +66,8 @@ dev_dependencies:
 
 # The following section is specific to Flutter packages.
 flutter:
+  assets:
+    - assets/images/
 
   # The following line ensures that the Material Icons font is
   # included with your application, so that you can use the icons in
