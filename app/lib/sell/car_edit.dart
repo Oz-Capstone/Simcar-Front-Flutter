@@ -72,7 +72,7 @@ class _CarEditPageState extends State<CarEditPage> {
 
     try {
       final response = await http.put(
-        Uri.parse("http://54.180.92.197:8080/api/cars/${widget.car['id']}"),
+        Uri.parse("https://simcar.kro.kr/api/cars/${widget.car['id']}"),
         headers: await ApiService.getHeaders(),
         body: jsonEncode(updatedCar),
       );
@@ -96,7 +96,8 @@ class _CarEditPageState extends State<CarEditPage> {
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text("차량 정보 수정")),
+      appBar: AppBar(title: const Text("차량 정보 수정")
+      , backgroundColor: Colors.white, ),
       body: Padding(
         padding: const EdgeInsets.all(16),
         child: Form(

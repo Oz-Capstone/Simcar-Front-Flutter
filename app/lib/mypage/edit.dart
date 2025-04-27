@@ -28,7 +28,7 @@ class _EditPageState extends State<EditPage> {
   Future<void> _fetchProfile() async {
     try {
       final response = await http.get(
-        Uri.parse("http://54.180.92.197:8080/api/members/profile"),
+        Uri.parse("https://simcar.kro.kr/api/members/profile"),
         headers: await ApiService.getHeaders(),
       );
 
@@ -59,7 +59,7 @@ class _EditPageState extends State<EditPage> {
 
     try {
       final response = await http.put(
-        Uri.parse("http://54.180.92.197:8080/api/members/profile"),
+        Uri.parse("https://simcar.kro.kr/api/members/profile"),
         headers: await ApiService.getHeaders(),
         body: jsonEncode({
           "name": nameController.text.trim(),

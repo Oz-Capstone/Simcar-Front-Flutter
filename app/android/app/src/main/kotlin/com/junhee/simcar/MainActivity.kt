@@ -1,4 +1,4 @@
-package com.example.app
+package com.junhee.simcar
 
 import io.flutter.embedding.android.FlutterActivity
 

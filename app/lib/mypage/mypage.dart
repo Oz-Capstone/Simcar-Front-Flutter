@@ -15,9 +15,9 @@ class MyPage extends StatefulWidget {
 }
 
 class _MyPageState extends State<MyPage> {
-  final int _currentPage = 1;
+  int _currentPage = 1; // ✅ 변수 수정 가능하도록 변경
   final int _itemsPerPage = 3;
-  String baseUrl = "http://54.180.92.197:8080";
+  String baseUrl = "https://simcar.kro.kr";
 
   Map<String, dynamic> userInfo = {};
   List<Map<String, dynamic>> favoriteCars = [];
@@ -58,7 +58,7 @@ class _MyPageState extends State<MyPage> {
   Future<void> _fetchUserInfo() async {
     try {
       final response = await http.get(
-        Uri.parse("http://54.180.92.197:8080/api/members/profile"),
+        Uri.parse("https://simcar.kro.kr/api/members/profile"),
         headers: await ApiService.getHeaders(),
       );
 
@@ -80,7 +80,7 @@ class _MyPageState extends State<MyPage> {
   Future<void> _fetchFavoriteCars() async {
     try {
       final response = await http.get(
-        Uri.parse("http://54.180.92.197:8080/api/members/favorites"),
+        Uri.parse("https://simcar.kro.kr/api/members/favorites"),
         headers: await ApiService.getHeaders(),
       );
 
@@ -162,8 +162,42 @@ class _MyPageState extends State<MyPage> {
     return Container(
       padding: const EdgeInsets.all(16),
       child: Column(
-        children: currentCars.map((car) => _buildCarItem(context, car)).toList(),
+        children: [
+          ...currentCars.map((car) => _buildCarItem(context, car)).toList(),
+          _buildPaginationControls(), // ✅ 페이지 네비게이션 추가
+        ],
       ),
+    );
+  }
+
+  Widget _buildPaginationControls() {
+    int totalPages = (favoriteCars.length / _itemsPerPage).ceil();
+
+    return Row(
+      mainAxisAlignment: MainAxisAlignment.center,
+      children: [
+        IconButton(
+          onPressed: _currentPage > 1
+              ? () {
+                  setState(() {
+                    _currentPage--;
+                  });
+                }
+              : null,
+          icon: const Icon(Icons.arrow_back),
+        ),
+        Text('$_currentPage / $totalPages'),
+        IconButton(
+          onPressed: _currentPage < totalPages
+              ? () {
+                  setState(() {
+                    _currentPage++;
+                  });
+                }
+              : null,
+          icon: const Icon(Icons.arrow_forward),
+        ),
+      ],
     );
   }
 

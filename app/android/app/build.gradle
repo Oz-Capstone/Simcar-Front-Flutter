@@ -4,9 +4,30 @@ plugins {
     // The Flutter Gradle Plugin must be applied after the Android and Kotlin Gradle plugins.
     id "dev.flutter.flutter-gradle-plugin"
 }
+// 배포
+    def keyProperties = new Properties()
+    def keyPropertiesFile = file("../key.properties")
+    if (keyPropertiesFile.exists()) {
+        keyProperties.load(new FileInputStream(keyPropertiesFile)) // 경로 확인
+    }
+
+        // ✅ 상대경로를 Gradle 기준으로 정확하게 File 객체로 만듦
+    def keystorePath = file("../" + keyProperties['storeFile'])
+    println("🔐 [DEBUG] Keystore path: " + keystorePath)
 
 android {
-    namespace = "com.example.app"
+    // 배포
+    signingConfigs {
+    release {
+        storeFile keystorePath
+        storePassword keyProperties['storePassword']
+        keyAlias keyProperties['keyAlias']
+        keyPassword keyProperties['keyPassword']
+    }
+}
+    
+    
+    namespace = "com.junhee.simcar" // ✅ applicationId랑 동일하게!
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion
 
@@ -21,7 +42,7 @@ android {
 
     defaultConfig {
         // TODO: Specify your own unique Application ID (https://developer.android.com/studio/build/application-id.html).
-        applicationId = "com.example.app"
+        applicationId = "com.junhee.simcar"
         // You can update the following values to match your application needs.
         // For more information, see: https://flutter.dev/to/review-gradle-config.
         minSdk = flutter.minSdkVersion
@@ -34,7 +55,10 @@ android {
         release {
             // TODO: Add your own signing config for the release build.
             // Signing with the debug keys for now, so `flutter run --release` works.
-            signingConfig = signingConfigs.debug
+            // 배포
+             signingConfig signingConfigs.release
+             shrinkResources false
+             minifyEnabled false
         }
     }
 }

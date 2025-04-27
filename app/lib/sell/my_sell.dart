@@ -15,7 +15,7 @@ class _MySellPageState extends State<MySellPage> {
   bool isloading = true; // 로딩 상태 확인
   String userPhoneNumber = "";
   List<Map<String, dynamic>> userCars = [];
-  String baseUrl = "http://54.180.92.197:8080";
+  String baseUrl = "https://simcar.kro.kr";
 
   @override
   void initState() {
@@ -27,7 +27,7 @@ class _MySellPageState extends State<MySellPage> {
   Future<void> _fetchUserData() async {
     try {
       final response = await http.get(
-        Uri.parse("http://54.180.92.197:8080/api/members/profile"),
+        Uri.parse("https://simcar.kro.kr/api/members/profile"),
         headers: await ApiService.getHeaders(),
       );
 
@@ -51,7 +51,7 @@ class _MySellPageState extends State<MySellPage> {
   Future<void> _fetchUserCars() async {
     try {
       final response = await http.get(
-        Uri.parse("http://54.180.92.197:8080/api/cars"),
+        Uri.parse("https://simcar.kro.kr/api/cars"),
         headers: await ApiService.getHeaders(),
       );
 
@@ -62,7 +62,7 @@ class _MySellPageState extends State<MySellPage> {
 
         for (var car in cars) {
           final carDetailResponse = await http.get(
-            Uri.parse("http://54.180.92.197:8080/api/cars/${car['id']}"),
+            Uri.parse("https://simcar.kro.kr/api/cars/${car['id']}"),
             headers: await ApiService.getHeaders(),
           );
 
@@ -93,7 +93,7 @@ class _MySellPageState extends State<MySellPage> {
   Future<void> _deleteCar(int carId) async {
     try {
       final response = await http.delete(
-        Uri.parse("http://54.180.92.197:8080/api/cars/$carId"),
+        Uri.parse("https://simcar.kro.kr/api/cars/$carId"),
         headers: await ApiService.getHeaders(),
       );
 

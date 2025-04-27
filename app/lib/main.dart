@@ -15,6 +15,7 @@ class MyApp extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
+      debugShowCheckedModeBanner: false, // ← 이거 추가!
       title: '오즈',
       theme: ThemeData(
         primarySwatch: Colors.blue,

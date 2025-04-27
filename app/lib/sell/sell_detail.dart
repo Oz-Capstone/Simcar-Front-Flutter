@@ -1,3 +1,4 @@
+// import 생략 없이 전체 포함
 import 'package:app/sell/home.dart';
 import 'package:flutter/material.dart';
 import 'package:image_picker/image_picker.dart';
@@ -17,11 +18,12 @@ class CarRegisterPage extends StatefulWidget {
 }
 
 class _CarRegisterPageState extends State<CarRegisterPage> {
-  int _currentStep = 0; // 현재 입력 단계
-  XFile? _imageFile; // 이미지 파일
+  int _currentStep = 0;
+  XFile? _imageFile;
   final picker = ImagePicker();
   bool _isCustomInput = false;
-  
+  bool _isSubmitting = false; // ✅ 등록 중 상태
+
   final Map<String, dynamic> carRequest = {
     "type": "",
     "price": 0,
@@ -48,11 +50,10 @@ class _CarRegisterPageState extends State<CarRegisterPage> {
   final TextEditingController _customInputController = TextEditingController();
 
   final Map<String, List<String>> dropdownOptions = {
-    // 가격, 차 번호, 전화번호만 직접 입력
     "차량 종류": ["세단", "SUV", "트럭", "쿠페", "해치백", "직접 입력"],
     "브랜드": ["현대", "기아", "BMW", "벤츠", "아우디", "직접 입력"],
     "모델": ["소나타", "아반떼", "카니발", "K5", "그랜저", "직접 입력"],
-    "연식" : ["2012", "2013", "2014", "2015", "2016", "직접 입력"],
+    "연식": ["2012", "2013", "2014", "2015", "2016", "직접 입력"],
     "연료 타입": ["가솔린", "디젤", "전기", "하이브리드", "직접 입력"],
     "보험이력": ["1회", "2회", "3회", "4회", "5회", "직접 입력"],
     "검사이력": ["1회", "2회", "3회", "4회", "5회", "직접 입력"],
@@ -71,70 +72,47 @@ class _CarRegisterPageState extends State<CarRegisterPage> {
   }
 
   void _nextStep() {
-  setState(() {
-    if (_currentStep < fields.length) {
-      String key = carRequest.keys.elementAt(_currentStep); // 현재 인덱스에 해당하는 key 가져오기
+    String key = carRequest.keys.elementAt(_currentStep);
+    String input = _isCustomInput ? _customInputController.text.trim() : _controller.text.trim();
 
-      if (!_isCustomInput) {
-        carRequest[key] = _controller.text.isNotEmpty ? _controller.text : carRequest[key];
-      } else {
-        carRequest[key] = _customInputController.text.isNotEmpty ? _customInputController.text : carRequest[key];
-      }
+    if (input.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text("값을 입력하거나 선택해주세요.")),
+      );
+      return;
+    }
 
+    setState(() {
+      carRequest[key] = input;
       _controller.clear();
       _customInputController.clear();
       _isCustomInput = false;
       _currentStep++;
-    } else {
-      if (_imageFile == null) {
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(content: Text("이미지를 선택해주세요.")),
-        );
-      } else {
-        _uploadCarInfo();
-      }
-    }
-  });
-}
-
-
-  void _prevStep() {
-  if (_currentStep > 0) {
-    setState(() {
-      _currentStep--;
-      String key = carRequest.keys.elementAt(_currentStep);
-
-      _controller.text = carRequest[key]?.toString() ?? "";
-      if (_isCustomInput) {
-        _customInputController.text = carRequest[key]?.toString() ?? "";
-      }
     });
   }
-}
 
-
-// Future<void> checkSession() async {
-//   var response = await http.get(
-//     Uri.parse("http://54.180.92.197:8080/api/members/profile"),
-//     headers: await ApiService.getHeaders(),
-//   );
-
-//   print("🔍 [세션 확인 응답]: ${response.statusCode}");
-//   print("📝 [세션 확인 응답 본문]: ${response.body}");
-// }
-
+  void _prevStep() {
+    if (_currentStep > 0) {
+      setState(() {
+        _currentStep--;
+        String key = carRequest.keys.elementAt(_currentStep);
+        if (_isCustomInput) {
+          _customInputController.text = carRequest[key]?.toString() ?? "";
+        } else {
+          _controller.text = carRequest[key]?.toString() ?? "";
+        }
+      });
+    }
+  }
 
   Future<void> _uploadCarInfo() async {
-    // checkSession();  // ✅ 세션 확인
     final prefs = await SharedPreferences.getInstance();
-    final sessionCookie = prefs.getString('session_cookie');  // ✅ JSESSIONID 가져오기
-    print("✅ 저장된 세션 쿠키: $sessionCookie");
+    final sessionCookie = prefs.getString('session_cookie');
 
-      if (sessionCookie == null || sessionCookie.isEmpty) {
-        print("❌ [오류] 저장된 JSESSIONID가 없습니다.");
-        return;
-      }
-
+    if (sessionCookie == null || sessionCookie.isEmpty) {
+      print("❌ [오류] 저장된 JSESSIONID가 없습니다.");
+      return;
+    }
 
     if (_imageFile == null) {
       ScaffoldMessenger.of(context).showSnackBar(
@@ -143,68 +121,61 @@ class _CarRegisterPageState extends State<CarRegisterPage> {
       return;
     }
 
+    setState(() {
+      _isSubmitting = true; // ✅ 로딩 시작
+    });
+
     try {
       var request = http.MultipartRequest(
         'POST',
-        Uri.parse("http://54.180.92.197:8080/api/cars"),
+        Uri.parse("https://simcar.kro.kr/api/cars"),
       );
 
       request.headers.addAll({
         "Content-Type": "multipart/form-data",
         "Accept": "*/*",
-        "Cookie": sessionCookie,  // ✅ 저장된 세션 쿠키 추가
+        "Cookie": sessionCookie,
       });
 
-      // print("📡 [요청 전송]: ${request.url}");
-      // print("📝 [요청 헤더]: ${request.headers}");
+      request.files.add(
+        http.MultipartFile.fromString(
+          'request',
+          jsonEncode({
+            "type": carRequest["type"],
+            "price": int.parse(carRequest["price"].toString()),
+            "brand": carRequest["brand"],
+            "model": carRequest["model"],
+            "year": int.parse(carRequest["year"].toString()),
+            "mileage": int.parse(carRequest["mileage"].toString()),
+            "fuelType": carRequest["fuelType"],
+            "carNumber": carRequest["carNumber"],
+            "insuranceHistory": int.tryParse(carRequest["insuranceHistory"].toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+            "inspectionHistory": int.tryParse(carRequest["inspectionHistory"].toString().replaceAll(RegExp(r'[^0-9]'), '')) ?? 0,
+            "color": carRequest["color"],
+            "transmission": carRequest["transmission"],
+            "region": carRequest["region"],
+            "contactNumber": carRequest["contactNumber"],
+          }),
+          contentType: MediaType('application', 'json'),
+        ),
+      );
 
-      // JSON 데이터를 application/json 타입으로 추가
-    request.files.add(
-      http.MultipartFile.fromString(
-        'request',
-        jsonEncode({
-          "type": carRequest["type"],
-          "price": int.parse(carRequest["price"]),
-          "brand": carRequest["brand"],
-          "model": carRequest["model"],
-          "year": int.parse(carRequest["year"]),
-          "mileage": int.parse(carRequest["mileage"]),
-          "fuelType": carRequest["fuelType"],
-          "carNumber": carRequest["carNumber"],
-          "insuranceHistory": int.tryParse(carRequest["insuranceHistory"].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0, // ✅ 숫자만 추출 후 변환
-          "inspectionHistory": int.tryParse(carRequest["inspectionHistory"].replaceAll(RegExp(r'[^0-9]'), '')) ?? 0, // ✅ 숫자만 추출 후 변환
-          "color": carRequest["color"],
-          "transmission": carRequest["transmission"],
-          "region": carRequest["region"],
-          "contactNumber": carRequest["contactNumber"],
-        }),
-        contentType: MediaType('application', 'json'),
-      ),
-    );
-
-    // 이미지 파일 추가
-    final mimeType = lookupMimeType(_imageFile!.path) ?? 'image/png';
-    final mimeSplit = mimeType.split('/');
-    request.files.add(await http.MultipartFile.fromPath(
-      'images',
-      _imageFile!.path,
-      contentType: MediaType(mimeSplit[0], mimeSplit[1]),
-    ));
+      final mimeType = lookupMimeType(_imageFile!.path) ?? 'image/png';
+      final mimeSplit = mimeType.split('/');
+      request.files.add(await http.MultipartFile.fromPath(
+        'images',
+        _imageFile!.path,
+        contentType: MediaType(mimeSplit[0], mimeSplit[1]),
+      ));
 
       var response = await request.send();
       var responseData = await http.Response.fromStream(response);
-
-      print("[request]: $request");
-      print("[request.fields]: ${request.fields}");
-      print("request.files: ${request.files}");
-
-      // print("✅ [서버 응답 코드]: ${response.statusCode}");
-      // print("🔍 [서버 응답 본문]: ${responseData.body}");
 
       if (response.statusCode == 200 || response.statusCode == 201) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(content: Text('🚗 차량이 성공적으로 등록되었습니다.')),
         );
+        Navigator.pop(context, MaterialPageRoute(builder: (context) => const Sell()));
       } else {
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text('❌ 차량 등록 실패: ${responseData.body}')),
@@ -215,24 +186,95 @@ class _CarRegisterPageState extends State<CarRegisterPage> {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(content: Text('❌ 오류 발생: $e')),
       );
+    } finally {
+      setState(() {
+        _isSubmitting = false; // ✅ 로딩 종료
+      });
     }
   }
 
-  Widget _buildImagePreview() {
-    if (_imageFile != null) {
-      return Image.file(File(_imageFile!.path), height: 200);
+  Widget _buildInputField() {
+    if (dropdownOptions.containsKey(fields[_currentStep])) {
+      final currentValue = _controller.text;
+      final options = dropdownOptions[fields[_currentStep]]!;
+
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          DropdownButtonFormField<String>(
+            value: _isCustomInput ? null : (options.contains(currentValue) ? currentValue : null),
+            hint: Text("${fields[_currentStep]} 선택", style: TextStyle(color: Colors.grey[500])),
+            dropdownColor: Colors.white,
+            onChanged: (String? newValue) {
+              setState(() {
+                _isCustomInput = newValue == "직접 입력";
+                if (!_isCustomInput && newValue != null) {
+                  _controller.text = newValue;
+                }
+              });
+            },
+            items: options.map((String option) {
+              return DropdownMenuItem<String>(value: option, child: Text(option));
+            }).toList(),
+          ),
+          if (_isCustomInput)
+            TextField(
+              controller: _customInputController,
+              decoration: const InputDecoration(
+                hintText: "직접 입력",
+                border: OutlineInputBorder(),
+              ),
+            ),
+        ],
+      );
     }
-    return const Text('이미지를 선택해주세요');
+
+    return TextField(
+      controller: _controller,
+      decoration: InputDecoration(
+        hintText: "${fields[_currentStep]} 입력",
+        border: const OutlineInputBorder(),
+      ),
+    );
+  }
+
+  Widget _buildImagePreview() {
+    return Column(
+      children: [
+        if (_imageFile != null)
+          ClipRRect(
+            borderRadius: BorderRadius.circular(10),
+            child: Image.file(File(_imageFile!.path), height: 200),
+          )
+        else
+          const Text('이미지를 선택해주세요'),
+        const SizedBox(height: 12),
+        Row(
+          mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+          children: [
+            ElevatedButton.icon(
+              onPressed: () => _pickImage(ImageSource.gallery),
+              icon: const Icon(Icons.photo_library, color: Colors.black),
+              label: const Text('갤러리', style: TextStyle(color: Colors.black)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            ),
+            ElevatedButton.icon(
+              onPressed: () => _pickImage(ImageSource.camera),
+              icon: const Icon(Icons.camera_alt, color: Colors.black),
+              label: const Text('카메라', style: TextStyle(color: Colors.black)),
+              style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
+            ),
+          ],
+        ),
+      ],
+    );
   }
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       backgroundColor: Colors.white,
-      appBar: AppBar(title: const Text('차량 정보 입력'),
-      backgroundColor: Colors.white, // ✅ 앱바 배경색 흰색
-
-      ),
+      appBar: AppBar(title: const Text('차량 정보 입력'), backgroundColor: Colors.white),
       body: Padding(
         padding: const EdgeInsets.all(20),
         child: Column(
@@ -245,144 +287,52 @@ class _CarRegisterPageState extends State<CarRegisterPage> {
               valueColor: const AlwaysStoppedAnimation<Color>(Colors.blue),
             ),
             const SizedBox(height: 30),
-
             if (_currentStep < fields.length) ...[
               Text(
                 fields[_currentStep],
                 style: const TextStyle(fontSize: 22, fontWeight: FontWeight.bold),
               ),
               const SizedBox(height: 10),
-
-              if (dropdownOptions.containsKey(fields[_currentStep])) ...[
-                DropdownButtonFormField<String>(
-                  value: dropdownOptions[fields[_currentStep]]!.contains(carRequest[carRequest.keys.elementAt(_currentStep)]) 
-                    ? carRequest[carRequest.keys.elementAt(_currentStep)]
-                    : null, // 값이 목록에 없으면 null로 설정하여 오류 방지
-                        hint: Text("${fields[_currentStep]} 선택", style: TextStyle(color: Colors.grey[500])),
-                        dropdownColor: Colors.white, // ✅ 드롭다운 리스트 배경색 흰색으로 변경
-                        onChanged: (String? newValue) {
-                        setState(() {
-                          _isCustomInput = newValue == "직접 입력";
-                          String key = carRequest.keys.elementAt(_currentStep);
-                          carRequest[key] = newValue!;
-                        });
-                      },
-                      items: dropdownOptions[fields[_currentStep]]!.map((String option) {
-                        return DropdownMenuItem<String>(value: option, child: Text(option));
-                      }).toList(),
+              _buildInputField(),
+              const SizedBox(height: 20),
+              Row(
+                mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                children: [
+                  if (_currentStep > 0)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _prevStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.white,
+                          foregroundColor: Colors.black,
+                        ),
+                        child: const Text("이전"),
+                      ),
                     ),
-              ],
-         if (_isCustomInput)
-          TextField(
-            controller: _customInputController,
-            decoration: const InputDecoration(
-              hintText: "직접 입력",
-              border: OutlineInputBorder(),
-            ),
-          )
-        else if (fields[_currentStep] == "가격")
-          TextField(
-            controller: _controller,
-            keyboardType: TextInputType.number,
-            decoration: const InputDecoration(
-              hintText: "0 ~ 9999999원 (예: 35000000)", // ✅ 가격 입력 예제 추가
-              border: OutlineInputBorder(),
-            ),
-          )
-        else if (fields[_currentStep] == "차 번호")
-          TextField(
-            controller: _controller,
-            keyboardType: TextInputType.text,
-            decoration: const InputDecoration(
-              hintText: "12가 3456", // ✅ 차량 번호 입력 예제 추가
-              border: OutlineInputBorder(),
-            ),
-          )
-        else if (fields[_currentStep] == "전화번호")
-          TextField(
-            controller: _controller,
-            keyboardType: TextInputType.text,
-            decoration: const InputDecoration(
-              hintText: "010-1111-2222", // ✅ 전화번호 입력 예제 추가
-              border: OutlineInputBorder(),
-            ),
-          )
-      else
-        TextField(
-          controller: _controller,
-          decoration: InputDecoration(
-            hintText: "${fields[_currentStep]} 입력", // ✅ 기본 값 유지
-            border: const OutlineInputBorder(),
-          ),
-        ),
-      const SizedBox(height: 20), // 버튼 간격 추가
-             
-                        Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              // 🔹 첫 번째 단계에서는 '이전' 버튼 숨김
-              if (_currentStep > 0)
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _prevStep, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white, 
-                      foregroundColor: Colors.black, 
+                  if (_currentStep > 0) const SizedBox(width: 10),
+                  if (_currentStep < fields.length)
+                    Expanded(
+                      child: ElevatedButton(
+                        onPressed: _nextStep,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: Colors.blue,
+                          foregroundColor: Colors.white,
+                        ),
+                        child: const Text("다음"),
+                      ),
                     ),
-                    child: const Text("이전"),
-                  ),
-                ),
-              
-              if (_currentStep > 0) const SizedBox(width: 10), // 버튼 간격 추가
-
-              // 🔹 마지막 단계에서는 '다음' 버튼 숨김
-              if (_currentStep < fields.length)
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: _nextStep, 
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.blue, 
-                      foregroundColor: Colors.white, 
-                    ),
-                    child: const Text("다음"),
-                  ),
-                ),
-            ],
-          ),
+                ],
+              ),
             ] else ...[
               _buildImagePreview(),
-              ElevatedButton(
-                onPressed: () => _pickImage(ImageSource.gallery), 
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                child: const Text('갤러리',
-                style: TextStyle(
-                  color: Colors.black,
-                  ),
-                 ),
-                ),
-              ElevatedButton(
-                onPressed: () => _pickImage(ImageSource.camera), 
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.white),
-                child: const Text('카메라',
-                style: TextStyle(
-                  color: Colors.black,
+              const SizedBox(height: 20),
+              _isSubmitting
+                  ? const Center(child: CircularProgressIndicator()) // ✅ 등록 중이면 인디케이터
+                  : ElevatedButton(
+                      onPressed: _uploadCarInfo,
+                      style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
+                      child: const Text("등록 완료", style: TextStyle(color: Colors.white)),
                     ),
-                  ),
-                ),
-               ElevatedButton(
-                onPressed: () async {
-                  await _uploadCarInfo(); // ✅ 함수 실행
-                  Navigator.pop( 
-                    context,
-                     MaterialPageRoute(builder: (context) => const Sell()),
-                  );
-                },
-                style: ElevatedButton.styleFrom(backgroundColor: Colors.blue),
-                child: const Text(
-                  "등록 완료",
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
             ],
           ],
         ),
