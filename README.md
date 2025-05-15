@@ -1,4 +1,4 @@
-![image](https://github.com/user-attachments/assets/3436dc40-9a9e-4379-a6bd-6fe42356e2b8)# 🚗 SimCar - 중고차 거래 앱
+# 🚗 SimCar - 중고차 거래 앱
 
 Flutter 기반 중고차 매매 앱입니다.  
 (서버: https://simcar.kro.kr)
